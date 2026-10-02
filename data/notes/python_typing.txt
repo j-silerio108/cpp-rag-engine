@@ -1,0 +1,1 @@
+Python's typing module lets you write generic functions using TypeVar and Generic.

@@ -1,0 +1,1 @@
+RAII means tying a resource's lifetime to an object's scope so destructors clean it up automatically.

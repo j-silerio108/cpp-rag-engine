@@ -1,0 +1,13 @@
+build/
+out/
+tools/venv/
+__pycache__/
+*.o
+*.obj
+*.exe
+*.ilk
+*.pdb
+.vs/
+.vscode/ipch/
+CMakeFiles/
+CMakeCache.txt
