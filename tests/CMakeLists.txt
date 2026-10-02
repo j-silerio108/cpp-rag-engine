@@ -9,6 +9,7 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(ragengine_tests
     test_similarity.cpp
     test_brute_force_index.cpp
+    test_lsh_index.cpp
     test_csv_loader.cpp
 )
 target_link_libraries(ragengine_tests PRIVATE ragengine_core Catch2::Catch2WithMain)

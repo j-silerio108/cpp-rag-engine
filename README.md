@@ -22,7 +22,7 @@ An [MCP server](mcp_server/server.py) wraps this: it embeds an incoming query in
 
 ## Design
 
-- `Index` ([include/ragengine/index.hpp](include/ragengine/index.hpp)) is an abstract interface with one method, `search()`. `BruteForceIndex` is the only implementation today, but the interface exists so a smarter index (e.g. an approximate-nearest-neighbor structure) could be swapped in later without touching any caller.
+- `Index` ([include/ragengine/index.hpp](include/ragengine/index.hpp)) is an abstract interface with one method, `search()`. There are two implementations: `BruteForceIndex` (exact, O(n) per query) and `LshIndex` ([include/ragengine/lsh_index.hpp](include/ragengine/lsh_index.hpp)), an approximate index using random-projection locality-sensitive hashing. Swapping between them (`rag_cli --lsh`) requires no changes to any caller — `main.cpp` and the MCP server only ever talk to the `Index` interface.
 - `cosine_similarity` ([include/ragengine/similarity.hpp](include/ragengine/similarity.hpp)) is a template constrained by a C++20 concept (`FloatVector`), not hardcoded to `std::vector<float>`.
 - Ranking uses `std::ranges::partial_sort` with a projection, not a hand-rolled loop.
 - No raw `new`/`delete` anywhere — ownership is `std::unique_ptr<Index>` in `main.cpp`, and `std::vector<Document>` owning its data by value elsewhere.
@@ -58,7 +58,7 @@ venv/bin/python tools/embed_query.py "what should I do with my dog" > query.vec
 ./build/rag_cli data/documents.csv "$(cat query.vec)" 3
 ```
 
-Add `--json` for machine-readable output (`[{"id":.., "score":.., "text":..}, ...]`).
+Add `--json` for machine-readable output (`[{"id":.., "score":.., "text":..}, ...]`), or `--lsh` to use the approximate index instead of brute force.
 
 ## MCP server
 

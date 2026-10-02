@@ -1,6 +1,7 @@
 #include "ragengine/brute_force_index.hpp"
 #include "ragengine/csv_loader.hpp"
 #include "ragengine/index.hpp"
+#include "ragengine/lsh_index.hpp"
 
 #include <cstdio>
 #include <iostream>
@@ -23,7 +24,7 @@ std::vector<float> parse_query(const std::string& arg) {
 
 void print_usage(const char* program_name) {
     std::cerr << "Usage: " << program_name
-              << " <documents.csv> <query_embedding e.g. 0.1|0.2|0.3> [top_k=3] [--json]\n";
+              << " <documents.csv> <query_embedding e.g. 0.1|0.2|0.3> [top_k=3] [--json] [--lsh]\n";
 }
 
 // Escapes a string for embedding in a JSON string literal. Document text is
@@ -76,11 +77,14 @@ void print_results_human(const std::vector<ragengine::ScoredDocument>& results) 
 
 int main(int argc, char** argv) {
     bool json_output = false;
+    bool use_lsh = false;
     std::vector<std::string> positional;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--json") {
             json_output = true;
+        } else if (arg == "--lsh") {
+            use_lsh = true;
         } else {
             positional.push_back(std::move(arg));
         }
@@ -95,7 +99,9 @@ int main(int argc, char** argv) {
     const std::vector<float> query = parse_query(positional[1]);
     const std::size_t top_k = positional.size() >= 3 ? static_cast<std::size_t>(std::stoul(positional[2])) : 3;
 
-    std::unique_ptr<ragengine::Index> index = std::make_unique<ragengine::BruteForceIndex>();
+    std::unique_ptr<ragengine::Index> index =
+        use_lsh ? std::unique_ptr<ragengine::Index>(std::make_unique<ragengine::LshIndex>())
+                : std::unique_ptr<ragengine::Index>(std::make_unique<ragengine::BruteForceIndex>());
 
     try {
         for (ragengine::Document& doc : ragengine::load_documents_csv(csv_path)) {
@@ -107,7 +113,8 @@ int main(int argc, char** argv) {
     }
 
     if (!json_output) {
-        std::cout << "Loaded " << index->size() << " documents from " << csv_path << "\n\n";
+        std::cout << "Loaded " << index->size() << " documents from " << csv_path << " (using "
+                   << (use_lsh ? "LshIndex" : "BruteForceIndex") << ")\n\n";
     }
 
     std::vector<ragengine::ScoredDocument> results;

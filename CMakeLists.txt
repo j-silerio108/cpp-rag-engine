@@ -12,6 +12,7 @@ endif()
 add_library(ragengine_core
     src/document.cpp
     src/brute_force_index.cpp
+    src/lsh_index.cpp
     src/csv_loader.cpp
 )
 target_include_directories(ragengine_core PUBLIC
