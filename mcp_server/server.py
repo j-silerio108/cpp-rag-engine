@@ -44,6 +44,7 @@ def search_notes(query: str, top_k: int = 3) -> list[dict]:
         [str(RAG_CLI), str(DEFAULT_CSV), vector_arg, str(top_k), "--json"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     if result.returncode != 0:
         raise RuntimeError(f"rag_cli.exe failed: {result.stderr.strip()}")
