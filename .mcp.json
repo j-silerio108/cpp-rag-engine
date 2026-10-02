@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ragengine": {
+      "command": "C:\\Users\\joses\\AppData\\Local\\CppRAGEngine\\venv\\Scripts\\python.exe",
+      "args": ["C:\\Users\\joses\\OneDrive\\Documents\\CppRAGEngine\\mcp_server\\server.py"]
+    }
+  }
+}

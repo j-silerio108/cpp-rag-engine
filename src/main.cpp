@@ -2,6 +2,7 @@
 #include "ragengine/csv_loader.hpp"
 #include "ragengine/index.hpp"
 
+#include <cstdio>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -22,20 +23,77 @@ std::vector<float> parse_query(const std::string& arg) {
 
 void print_usage(const char* program_name) {
     std::cerr << "Usage: " << program_name
-              << " <documents.csv> <query_embedding e.g. 0.1|0.2|0.3> [top_k=3]\n";
+              << " <documents.csv> <query_embedding e.g. 0.1|0.2|0.3> [top_k=3] [--json]\n";
+}
+
+// Escapes a string for embedding in a JSON string literal. Document text is
+// free-form user content, so quotes, backslashes, and control characters all
+// need handling, not just the common cases.
+std::string json_escape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    char buf[8];
+                    std::snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned char>(c));
+                    out += buf;
+                } else {
+                    out += c;
+                }
+        }
+    }
+    return out;
+}
+
+void print_results_json(const std::vector<ragengine::ScoredDocument>& results) {
+    std::cout << '[';
+    for (std::size_t i = 0; i < results.size(); ++i) {
+        if (i != 0) {
+            std::cout << ',';
+        }
+        std::cout << "{\"id\":" << results[i].document->id() << ",\"score\":" << results[i].score
+                   << ",\"text\":\"" << json_escape(results[i].document->text()) << "\"}";
+    }
+    std::cout << "]\n";
+}
+
+void print_results_human(const std::vector<ragengine::ScoredDocument>& results) {
+    std::cout << "Top " << results.size() << " results:\n";
+    for (const ragengine::ScoredDocument& result : results) {
+        std::cout << "  [" << result.score << "] (id=" << result.document->id() << ") "
+                  << result.document->text() << '\n';
+    }
 }
 
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 3) {
+    bool json_output = false;
+    std::vector<std::string> positional;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--json") {
+            json_output = true;
+        } else {
+            positional.push_back(std::move(arg));
+        }
+    }
+
+    if (positional.size() < 2) {
         print_usage(argv[0]);
         return 1;
     }
 
-    const std::string csv_path = argv[1];
-    const std::vector<float> query = parse_query(argv[2]);
-    const std::size_t top_k = argc >= 4 ? static_cast<std::size_t>(std::stoul(argv[3])) : 3;
+    const std::string& csv_path = positional[0];
+    const std::vector<float> query = parse_query(positional[1]);
+    const std::size_t top_k = positional.size() >= 3 ? static_cast<std::size_t>(std::stoul(positional[2])) : 3;
 
     std::unique_ptr<ragengine::Index> index = std::make_unique<ragengine::BruteForceIndex>();
 
@@ -48,7 +106,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::cout << "Loaded " << index->size() << " documents from " << csv_path << "\n\n";
+    if (!json_output) {
+        std::cout << "Loaded " << index->size() << " documents from " << csv_path << "\n\n";
+    }
 
     std::vector<ragengine::ScoredDocument> results;
     try {
@@ -58,10 +118,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::cout << "Top " << results.size() << " results:\n";
-    for (const ragengine::ScoredDocument& result : results) {
-        std::cout << "  [" << result.score << "] (id=" << result.document->id() << ") "
-                  << result.document->text() << '\n';
+    if (json_output) {
+        print_results_json(results);
+    } else {
+        print_results_human(results);
     }
 
     return 0;
